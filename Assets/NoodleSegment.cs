@@ -39,7 +39,7 @@ public class NoodleSegment : MonoBehaviour {
         }
 
         // Move the wiggle
-        transform.Translate( Vector3.right * Time.deltaTime * amplitude * innerConstant * Mathf.Cos( innerConstant * ( Time.time - startTime ) ) , Space.World);
+        transform.Translate( Vector3.right * Time.deltaTime * amplitude * innerConstant * Mathf.Cos( innerConstant * ( Time.time - startTime ) ));
 
         // Move forward
         transform.Translate( Vector3.up * forwardSpeed * Time.deltaTime );
