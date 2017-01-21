@@ -5,13 +5,15 @@ using UnityEngine;
 public class MouseFollower : MonoBehaviour {
 
     [SerializeField]
-    float limit = 0f;
+    public float limit = 0f;
 
-    bool fired = false;
+    public bool fired = false;
 
-    float timerStart = 0f;
-    float timerEnd = 0f;
+    public float timerStart = 0f;
+    public float timerEnd = 0f;
     float timerResult = 0f;
+
+    public EmitterSpawner emitterSpawner;
 
     void Update()
     {
@@ -68,7 +70,11 @@ public class MouseFollower : MonoBehaviour {
             {
                 timerResult = limit;
             }
-            print(timerResult);
+
+            // Emit a noodle
+            float noodliness = Mathf.Max(0.2f, timerResult / limit);
+            emitterSpawner.Spawn( noodliness, noodliness );
+
             fired = false;
         }
         

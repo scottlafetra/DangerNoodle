@@ -7,6 +7,9 @@ public class EmitsNoodle : MonoBehaviour {
     public float noodleTimeSpacing;
     public int noodleLength;
 
+    public float noodlePeriod; // 0 to 1 values
+    public float lifetimeRange; // 0 to 1 values
+
     public GameObject noodleSegment;
 
     private int noodlesEmitted = 0;
@@ -36,7 +39,8 @@ public class EmitsNoodle : MonoBehaviour {
             UpdateNoodleTime();
 
             // Emit a noodle Segment
-            Instantiate( noodleSegment, transform.position, transform.rotation );
+            NoodleSegment newSegment = Instantiate( noodleSegment, transform.position, transform.rotation ).GetComponent<NoodleSegment>();
+            newSegment.period *= noodlePeriod;
             noodlesEmitted += 1;
         }
     }
