@@ -4,7 +4,9 @@ using UnityEngine;
 
 public class LineHandler : MonoBehaviour {
 
-    private List<Transform> positions = new List<Transform>();
+    public float timeAfterDeath;
+
+    private List<GameObject> segments = new List<GameObject>();
     private LineRenderer lineRenderer;
 
 	// Use this for initialization
@@ -19,24 +21,41 @@ public class LineHandler : MonoBehaviour {
 
     private void UpdateLineRenderer()
     {
-        lineRenderer.numPositions = positions.Count;
+        lineRenderer.numPositions = segments.Count;
 
         List<Vector3> actualPositions = new List<Vector3>();
-        foreach( Transform segTransform in positions )
+        foreach( GameObject segment in segments )
         {
-            if( segTransform != null )
+            if( segment != null )
             {
-                actualPositions.Add( segTransform.position );
+                actualPositions.Add( segment.transform.position );
             }
             
         }
 
         lineRenderer.SetPositions( actualPositions.ToArray() );
     }
-	
-    public void AddSegment( Transform segment)
+
+    public void FreezeLine()
     {
-        positions.Add( segment );
+        foreach( GameObject segment in segments )
+        {
+            // Remove destructability and movement
+            Destroy( segment.GetComponent<EventOnTriggerEnter>() );
+            Destroy( segment.GetComponent<NoodleSegment>() );
+
+            // Add destroy on time
+            segment.AddComponent<DestroyOnTime>().lifetime = timeAfterDeath;
+        }
+
+        // Destroy this
+        gameObject.AddComponent<DestroyOnTime>().lifetime = timeAfterDeath;
+    }
+	
+    public void AddSegment( GameObject segment)
+    {
+        this.segments.Add( segment );
+        segment.GetComponent<EventOnTriggerEnter>().triggered += new EventOnTriggerEnter.NoodleTriggeredHandler( FreezeLine );
     }
     /*
     public void RemoveSegment(Vector3 segment)
@@ -47,9 +66,9 @@ public class LineHandler : MonoBehaviour {
 
     public void RemoveSegment(int index)
     {
-        positions.RemoveAt( index );
+        segments.RemoveAt( index );
 
-        if( positions.Count == 0 )
+        if( segments.Count == 0 )
         {
             Destroy( gameObject );
         }

@@ -72,7 +72,7 @@ public class MouseFollower : MonoBehaviour {
             }
 
             // Emit a noodle
-            float noodliness = Mathf.Max(0.05f, timerResult / limit);
+            float noodliness = Mathf.Max(0.01f, timerResult / limit);
             emitterSpawner.Spawn( noodliness, noodliness );
 
             fired = false;

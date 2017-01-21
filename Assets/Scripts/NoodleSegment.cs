@@ -13,7 +13,6 @@ public class NoodleSegment : MonoBehaviour {
     public GameObject visuals;
 
     public LineHandler lineHandler;
-    
 
     private float endTime;
     private float startTime;
@@ -32,12 +31,7 @@ public class NoodleSegment : MonoBehaviour {
 
         innerConstant = ( 2 * Mathf.PI ) / period;
 
-        lineHandler.AddSegment( transform );
-    }
-
-    void OnDestroy()
-    {
-        lineHandler.RemoveSegment( 0 ); // First in, first out
+        lineHandler.AddSegment( gameObject );
     }
 
     // Update is called once per frame
@@ -45,7 +39,7 @@ public class NoodleSegment : MonoBehaviour {
     {
         if(Time.time > endTime )
         {
-            Destroy( gameObject );
+            GetComponent<EventOnTriggerEnter>().OnTriggerEnter2D( null );
         }
 
         // Move the wiggle

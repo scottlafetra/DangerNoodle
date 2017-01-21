@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DestroyOnTriggerEnter : MonoBehaviour {
+public class EventOnTriggerEnter : MonoBehaviour {
     public string exceptionTag = "";
 
     public delegate void NoodleTriggeredHandler();
@@ -13,7 +13,6 @@ public class DestroyOnTriggerEnter : MonoBehaviour {
         if( other == null || other.tag != exceptionTag ) // if manually triggered or not an exception
         {
             triggered();
-            Destroy( gameObject );
         }
     }
 }

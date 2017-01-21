@@ -18,6 +18,8 @@ public class EmitsNoodle : MonoBehaviour {
     public GameObject lineRenderer;
     private LineHandler lineHandler;
 
+    private bool emitting = true;
+
 	// Use this for initialization
 	void Start () {
 
@@ -29,6 +31,11 @@ public class EmitsNoodle : MonoBehaviour {
     void UpdateNoodleTime()
     {
         nextNoodleTime = Time.time + noodleTimeSpacing;
+    }
+
+    public void StopEmitting()
+    {
+        emitting = false;
     }
 	
 	IEnumerator EmitNoodles()
@@ -45,11 +52,17 @@ public class EmitsNoodle : MonoBehaviour {
             }
             UpdateNoodleTime();
 
+            if( !emitting )
+            {// stop emitting
+                break;
+            }
+
             // Emit a noodle Segment
             NoodleSegment newSegment = Instantiate( noodleSegment, transform.position, transform.rotation ).GetComponent<NoodleSegment>();
             newSegment.period *= noodlePeriod;
             newSegment.lifetime *= lifetimeRange;
             newSegment.lineHandler = lineHandler;
+            newSegment.gameObject.GetComponent<EventOnTriggerEnter>().triggered += new EventOnTriggerEnter.NoodleTriggeredHandler( StopEmitting );
             noodlesEmitted += 1;
         }
     }
