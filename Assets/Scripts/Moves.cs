@@ -6,11 +6,18 @@ public class Moves : MonoBehaviour {
 
     public float speed;
 
+    private Rigidbody2D myRigidbody;
+
+    void Start()
+    {
+        myRigidbody = GetComponent<Rigidbody2D>();
+    }
+
 	// Update is called once per frame
 	void Update () {
-        transform.Translate( Input.GetAxis("Horizontal") * Time.deltaTime * speed, 
-            Input.GetAxis( "Vertical" ) * Time.deltaTime * speed, 
-            0, 
-            Space.World );
+        myRigidbody.velocity = new Vector2( 
+            Input.GetAxis("Horizontal")  * speed, 
+            Input.GetAxis( "Vertical" )  * speed
+            );
 	}
 }
