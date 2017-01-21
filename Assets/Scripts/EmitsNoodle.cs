@@ -15,8 +15,14 @@ public class EmitsNoodle : MonoBehaviour {
     private int noodlesEmitted = 0;
     private float nextNoodleTime;
 
+    public GameObject lineRenderer;
+    private LineHandler lineHandler;
+
 	// Use this for initialization
 	void Start () {
+
+        lineHandler = Instantiate( lineRenderer ).GetComponent<LineHandler>();
+
         StartCoroutine( EmitNoodles() );
 	}
 
@@ -29,7 +35,8 @@ public class EmitsNoodle : MonoBehaviour {
     {
         UpdateNoodleTime();
         noodlesEmitted = 0;
-        while( noodlesEmitted < noodleLength )
+        float endTime = noodleTimeSpacing * noodleLength;
+        while( Time.time < noodleLength )
         {
             // Wait until next time to emit
             while( Time.time < nextNoodleTime )
@@ -41,6 +48,8 @@ public class EmitsNoodle : MonoBehaviour {
             // Emit a noodle Segment
             NoodleSegment newSegment = Instantiate( noodleSegment, transform.position, transform.rotation ).GetComponent<NoodleSegment>();
             newSegment.period *= noodlePeriod;
+            newSegment.lifetime *= lifetimeRange;
+            newSegment.lineHandler = lineHandler;
             noodlesEmitted += 1;
         }
     }

@@ -12,6 +12,9 @@ public class NoodleSegment : MonoBehaviour {
 
     public GameObject visuals;
 
+    public LineHandler lineHandler;
+    
+
     private float endTime;
     private float startTime;
 
@@ -28,6 +31,13 @@ public class NoodleSegment : MonoBehaviour {
         endTime = startTime + lifetime;
 
         innerConstant = ( 2 * Mathf.PI ) / period;
+
+        lineHandler.AddSegment( transform );
+    }
+
+    void OnDestroy()
+    {
+        lineHandler.RemoveSegment( 0 ); // First in, first out
     }
 
     // Update is called once per frame
