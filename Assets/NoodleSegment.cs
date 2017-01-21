@@ -12,12 +12,11 @@ public class NoodleSegment : MonoBehaviour {
 
     public GameObject visuals;
 
-    private Vector3 forwardDirection;
-    private Vector3 sideDirection;
-    private Quaternion startRotation;
-
     private float endTime;
     private float startTime;
+
+    //Calculus stuff
+    private float innerConstant;
     /*
     //TODO: Remove
     private float maxX = 0;
@@ -25,12 +24,10 @@ public class NoodleSegment : MonoBehaviour {
 
     void Start()
     {
-        forwardDirection = new Vector3( transform.forward.x, transform.forward.y, transform.forward.z );
-        sideDirection = new Vector3( transform.right.x, transform.right.y, transform.right.z );
-
         startTime = Time.time;
         endTime = startTime + lifetime;
-        startRotation = transform.rotation;
+
+        innerConstant = ( 2 * Mathf.PI ) / period;
     }
 
     // Update is called once per frame
@@ -42,13 +39,11 @@ public class NoodleSegment : MonoBehaviour {
         }
 
         // Move the wiggle
-        transform.Translate( sideDirection * Time.deltaTime * amplitude * Mathf.Cos( ( 2 * Mathf.PI ) * ( ( Time.time - startTime ) / period ) ) , Space.World);
+        transform.Translate( Vector3.right * Time.deltaTime * amplitude * innerConstant * Mathf.Cos( innerConstant * ( Time.time - startTime ) ) , Space.World);
 
         // Move forward
-        transform.Translate( forwardDirection * forwardSpeed * Time.deltaTime );
+        transform.Translate( Vector3.up * forwardSpeed * Time.deltaTime );
 
-        // Face the right direction
-        transform.rotation = startRotation * Quaternion.Euler(0, 45 * Mathf.Cos( ( 2 * Mathf.PI ) * ( ( Time.time - startTime ) / period ) ), 0);
         /*
         maxX = Mathf.Max( maxX, transform.position.x );
         minX = Mathf.Min( minX, transform.position.x );
