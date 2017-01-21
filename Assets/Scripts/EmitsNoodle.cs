@@ -15,7 +15,6 @@ public class EmitsNoodle : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         StartCoroutine( EmitNoodles() );
-        
 	}
 
     void UpdateNoodleTime()
