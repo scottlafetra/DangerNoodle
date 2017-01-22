@@ -16,8 +16,8 @@ public class Moves : MonoBehaviour {
 	// Update is called once per frame
 	void Update () {
         myRigidbody.velocity = new Vector2( 
-            Input.GetAxis("Horizontal")  * speed, 
-            Input.GetAxis( "Vertical" )  * speed
+            Input.GetAxis("move_X")  * speed, 
+            Input.GetAxis( "move_Y" )  * speed
             );
 	}
 }

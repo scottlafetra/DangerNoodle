@@ -8,14 +8,20 @@ public class GameManager : MonoBehaviour {
     public List<Transform> spawnPoints;
 
     public GameObject menu;
+    public GameObject creditStuff;
+
+    public static GameManager instance;
 
 	// Use this for initialization
 	void Start () {
-		
+        instance = this;
+
+        EnterMenu();
 	}
 
     public void StartGame()
     {
+        creditStuff.SetActive( false );
         menu.SetActive( false );
 
         for( int i = 0; i < players.Count; ++i )
@@ -31,6 +37,18 @@ public class GameManager : MonoBehaviour {
     {
         menu.SetActive( true );
 
+        creditStuff.SetActive( false );
+        foreach( GameObject player in players )
+        {
+            player.SetActive( false );
+        }
+    }
+
+    public void EnterCredits()
+    {
+        creditStuff.SetActive( true );
+
+        menu.SetActive( false );
         foreach( GameObject player in players )
         {
             player.SetActive( false );
