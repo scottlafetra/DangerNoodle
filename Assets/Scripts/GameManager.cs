@@ -24,9 +24,17 @@ public class GameManager : MonoBehaviour {
 
     void Update()
     {
-        if( !inMenu && InputManager.ActiveDevice.MenuWasPressed )
+        if( InputManager.ActiveDevice.MenuWasPressed )
         {
-            EnterMenu();
+            if( inMenu )
+            {
+                Application.Quit();
+            }
+            else
+            {
+                EnterMenu();
+            }
+            
         }
 
         if( inMenu && InputManager.ActiveDevice.AnyButton.WasPressed )

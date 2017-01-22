@@ -8,6 +8,7 @@ public class TracksPlayerCharge : MonoBehaviour {
     public PlayerController player;
 
     public float intensity = 6;
+    public float idle = 0.5f;
 
     private Light chargeLight;
 	
@@ -20,11 +21,11 @@ public class TracksPlayerCharge : MonoBehaviour {
     {
         if( player.fired )
         {
-            chargeLight.intensity = Mathf.Min( ( Time.time - player.timerStart ) / player.limit, 1 ) * intensity;
+            chargeLight.intensity = Mathf.Max( Mathf.Min( ( Time.time - player.timerStart ) / player.limit, 1 ) * intensity, idle) ;
         }
         else
         {
-            chargeLight.intensity = 0;
+            chargeLight.intensity = idle;
         }
         	
 	}
