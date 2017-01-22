@@ -9,6 +9,7 @@ public class EmitterSpawner : MonoBehaviour {
 	public void Spawn(float range, float period)
     {
         EmitsNoodle newEmitter = Instantiate( emitter, transform.position, transform.rotation ).GetComponent<EmitsNoodle>();
+        newEmitter.gameObject.SetActive( true );
         newEmitter.noodlePeriod = period;
         newEmitter.lifetimeRange = range;
     }

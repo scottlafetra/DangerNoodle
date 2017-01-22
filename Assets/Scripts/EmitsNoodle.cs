@@ -63,6 +63,7 @@ public class EmitsNoodle : MonoBehaviour {
             newSegment.lifetime *= lifetimeRange;
             newSegment.lineHandler = lineHandler;
             newSegment.gameObject.GetComponent<EventOnTriggerEnter>().triggered += new EventOnTriggerEnter.NoodleTriggeredHandler( StopEmitting );
+            newSegment.gameObject.SetActive( true );
             noodlesEmitted += 1;
         }
     }

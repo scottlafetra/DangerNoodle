@@ -22,13 +22,13 @@ public class PlayerController : MonoBehaviour {
 
     void Start()
     {
-        myRigidbody = GetComponent<Rigidbody2D>();
+        myRigidbody = gameObject.GetComponent<Rigidbody2D>();
         controller = InputManager.Devices[ GetComponent<PlayerTag>().playerNum ];
+        Debug.Log( GetComponent<PlayerTag>().playerNum );
 	}
 	
 	// Update is called once per frame
 	void Update () {
-        int activeIndex = InputManager.Devices.IndexOf( InputManager.ActiveDevice );
         myRigidbody.velocity = new Vector2(
             controller.LeftStick.X * speed,
             controller.LeftStick.Y * speed
