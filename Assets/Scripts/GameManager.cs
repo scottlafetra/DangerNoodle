@@ -40,17 +40,26 @@ public class GameManager : MonoBehaviour {
         inMenu = false;
         menu.SetActive( false );
 
-        for( int i = 0; i < players.Count; ++i )
+        // if players goes down
+        foreach( GameObject player in players )
+        {
+            player.SetActive( false );
+        }
+        foreach( ScoreKeeper scoreKeeper in scores )
+        {
+            scoreKeeper.gameObject.SetActive( false );
+        }
+
+
+        for( int i = 0; i < InputManager.Devices.Count; ++i )
         {
             players[i].SetActive( true );
             players[ i ].transform.position = spawnPoints[ i ].position;
             players[ i ].transform.rotation = spawnPoints[ i ].rotation;
             players[ i ].GetComponent<Rigidbody2D>().velocity = new Vector2();
             players[ i ].GetComponent<PlayerController>().fired = false;
-        }
-        foreach( ScoreKeeper scoreKeeper in scores )
-        {
-            scoreKeeper.gameObject.SetActive( true );
+
+            scores[ i ].gameObject.SetActive( true );
         }
     }
 
