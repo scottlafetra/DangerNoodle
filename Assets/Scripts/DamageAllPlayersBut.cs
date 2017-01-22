@@ -10,7 +10,7 @@ public class DamageAllPlayersBut : MonoBehaviour {
     {
         if( other.tag == "Player" )
         {
-            if( exception != other.gameObject.GetComponent<PlayerTag>().playerNum )
+            if( exception != other.gameObject.GetComponent<PlayerController>().playerNum )
             {
                 // Damage code
                 other.gameObject.SetActive( false );

@@ -1,10 +1,8 @@
-﻿using System;
-using System.Collections.Generic;
-using UnityEngine;
-
-
-namespace InControl
+﻿namespace InControl
 {
+	using UnityEngine;
+
+
 	public class TouchSwipeControl : TouchControl
 	{
 		[Header( "Position" )]
@@ -15,12 +13,12 @@ namespace InControl
 		[SerializeField]
 		Rect activeArea = new Rect( 25.0f, 25.0f, 50.0f, 50.0f );
 
-		[Range( 0, 1 )] 
+		[Range( 0, 1 )]
 		public float sensitivity = 0.1f;
 
 
 		[Header( "Analog Target" )]
-		
+
 		public AnalogTarget target = AnalogTarget.None;
 		public SnapAngles snapAngles = SnapAngles.None;
 
@@ -31,11 +29,13 @@ namespace InControl
 		public ButtonTarget downTarget = ButtonTarget.None;
 		public ButtonTarget leftTarget = ButtonTarget.None;
 		public ButtonTarget rightTarget = ButtonTarget.None;
+		public ButtonTarget tapTarget = ButtonTarget.None;
 		public bool oneSwipePerTouch = false;
 
 
 		Rect worldActiveArea;
 		Vector3 currentVector;
+		Vector3 beganPosition;
 		Vector3 lastPosition;
 		Touch currentTouch;
 		bool fireButtonTarget;
@@ -57,19 +57,19 @@ namespace InControl
 				currentTouch = null;
 			}
 		}
-		
-		
+
+
 		public override void ConfigureControl()
 		{
 			worldActiveArea = TouchManager.ConvertToWorld( activeArea, areaUnitType );
 		}
-		
-		
+
+
 		public override void DrawGizmos()
 		{
 			Utility.DrawRectGizmo( worldActiveArea, Color.yellow );
-//			Gizmos.color = Color.red;
-//			Gizmos.DrawLine( Vector3.zero, currentVector * 2.0f );
+			//			Gizmos.color = Color.red;
+			//			Gizmos.DrawLine( Vector3.zero, currentVector * 2.0f );
 		}
 
 
@@ -81,17 +81,18 @@ namespace InControl
 				dirty = false;
 			}
 		}
-		
 
-		public override void SubmitControlState( ulong updateTick )
+
+		public override void SubmitControlState( ulong updateTick, float deltaTime )
 		{
 			var value = SnapTo( currentVector, snapAngles );
-			SubmitAnalogValue( target, value, 0.0f, 1.0f, updateTick );
+			SubmitAnalogValue( target, value, 0.0f, 1.0f, updateTick, deltaTime );
 
-			SubmitButtonState( upTarget, fireButtonTarget && nextButtonTarget == upTarget, updateTick );
-			SubmitButtonState( rightTarget, fireButtonTarget && nextButtonTarget == rightTarget, updateTick );
-			SubmitButtonState( downTarget, fireButtonTarget && nextButtonTarget == downTarget, updateTick );
-			SubmitButtonState( leftTarget, fireButtonTarget && nextButtonTarget == leftTarget, updateTick );
+			SubmitButtonState( upTarget, fireButtonTarget && nextButtonTarget == upTarget, updateTick, deltaTime );
+			SubmitButtonState( downTarget, fireButtonTarget && nextButtonTarget == downTarget, updateTick, deltaTime );
+			SubmitButtonState( leftTarget, fireButtonTarget && nextButtonTarget == leftTarget, updateTick, deltaTime );
+			SubmitButtonState( rightTarget, fireButtonTarget && nextButtonTarget == rightTarget, updateTick, deltaTime );
+			SubmitButtonState( tapTarget, fireButtonTarget && nextButtonTarget == tapTarget, updateTick, deltaTime );
 
 			if (fireButtonTarget && nextButtonTarget != ButtonTarget.None)
 			{
@@ -100,8 +101,19 @@ namespace InControl
 				nextButtonTarget = ButtonTarget.None;
 			}
 		}
-		
-		
+
+
+		public override void CommitControlState( ulong updateTick, float deltaTime )
+		{
+			CommitAnalog( target );
+			CommitButton( upTarget );
+			CommitButton( downTarget );
+			CommitButton( leftTarget );
+			CommitButton( rightTarget );
+			CommitButton( tapTarget );
+		}
+
+
 		public override void TouchBegan( Touch touch )
 		{
 			if (currentTouch != null)
@@ -109,7 +121,7 @@ namespace InControl
 				return;
 			}
 
-			var beganPosition = TouchManager.ScreenToWorldPoint( touch.position );
+			beganPosition = TouchManager.ScreenToWorldPoint( touch.position );
 			if (worldActiveArea.Contains( beganPosition ))
 			{
 				lastPosition = beganPosition;
@@ -121,8 +133,8 @@ namespace InControl
 				lastButtonTarget = ButtonTarget.None;
 			}
 		}
-		
-		
+
+
 		public override void TouchMoved( Touch touch )
 		{
 			if (currentTouch != touch)
@@ -132,7 +144,7 @@ namespace InControl
 
 			var movedPosition = TouchManager.ScreenToWorldPoint( touch.position );
 			var delta = movedPosition - lastPosition;
-			if (delta.magnitude > sensitivity)
+			if (delta.magnitude >= sensitivity)
 			{
 				lastPosition = movedPosition;
 				currentVector = delta.normalized;
@@ -147,8 +159,8 @@ namespace InControl
 				}
 			}
 		}
-		
-		
+
+
 		public override void TouchEnded( Touch touch )
 		{
 			if (currentTouch != touch)
@@ -158,6 +170,16 @@ namespace InControl
 
 			currentTouch = null;
 			currentVector = Vector2.zero;
+
+			var touchPosition = TouchManager.ScreenToWorldPoint( touch.position );
+			var delta = beganPosition - touchPosition;
+			if (delta.magnitude < sensitivity)
+			{
+				fireButtonTarget = true;
+				nextButtonTarget = tapTarget;
+				lastButtonTarget = ButtonTarget.None;
+				return;
+			}
 
 			fireButtonTarget = false;
 			nextButtonTarget = ButtonTarget.None;
@@ -194,7 +216,7 @@ namespace InControl
 
 
 		public Rect ActiveArea
-		{ 
+		{
 			get
 			{
 				return activeArea;
@@ -212,7 +234,7 @@ namespace InControl
 
 
 		public TouchUnitType AreaUnitType
-		{ 
+		{
 			get
 			{
 				return areaUnitType;

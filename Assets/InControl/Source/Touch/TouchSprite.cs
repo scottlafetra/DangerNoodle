@@ -1,10 +1,9 @@
-﻿using UnityEngine;
-using System;
-using System.Collections.Generic;
-
-
-namespace InControl
+﻿namespace InControl
 {
+	using System;
+	using UnityEngine;
+
+
 	public enum TouchSpriteShape : int
 	{
 		Oval,
@@ -78,7 +77,13 @@ namespace InControl
 		}
 
 
-		public void Update( bool forceUpdate = false )
+		public void Update()
+		{
+			Update( false );
+		}
+
+
+		public void Update( bool forceUpdate )
 		{
 			if (Dirty || forceUpdate)
 			{
@@ -126,7 +131,7 @@ namespace InControl
 			spriteGameObject.transform.parent = parentTransform;
 			spriteGameObject.transform.localPosition = Vector3.zero;
 			spriteGameObject.transform.localScale = Vector3.one;
-			spriteGameObject.layer = LayerMask.NameToLayer( "UI" );
+			spriteGameObject.layer = parentTransform.gameObject.layer;
 			return spriteGameObject;
 		}
 
@@ -191,8 +196,8 @@ namespace InControl
 			}
 			else
 			{
-				var dx = Mathf.Abs( testWorldPoint.x - Position.x ) * 2.0f;
-				var dy = Mathf.Abs( testWorldPoint.y - Position.y ) * 2.0f;
+				var dx = Utility.Abs( testWorldPoint.x - Position.x ) * 2.0f;
+				var dy = Utility.Abs( testWorldPoint.y - Position.y ) * 2.0f;
 				return dx <= worldSize.x && dy <= worldSize.y;
 			}
 		}

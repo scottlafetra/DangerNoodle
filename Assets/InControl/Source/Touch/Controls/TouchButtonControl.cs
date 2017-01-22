@@ -1,9 +1,8 @@
-using System;
-using UnityEngine;
-
-
 namespace InControl
 {
+	using UnityEngine;
+
+
 	public class TouchButtonControl : TouchControl
 	{
 		[Header( "Position" )]
@@ -83,19 +82,25 @@ namespace InControl
 		}
 
 
-		public override void SubmitControlState( ulong updateTick )
+		public override void SubmitControlState( ulong updateTick, float deltaTime )
 		{
 			if (currentTouch == null && allowSlideToggle)
 			{
 				ButtonState = false;
 				var touchCount = TouchManager.TouchCount;
-				for (int i = 0; i < touchCount; i++)
+				for (var i = 0; i < touchCount; i++)
 				{
 					ButtonState = ButtonState || button.Contains( TouchManager.GetTouch( i ) );
 				}
 			}
 
-			SubmitButtonState( target, ButtonState, updateTick );
+			SubmitButtonState( target, ButtonState, updateTick, deltaTime );
+		}
+
+
+		public override void CommitControlState( ulong updateTick, float deltaTime )
+		{
+			CommitButton( target );
 		}
 
 

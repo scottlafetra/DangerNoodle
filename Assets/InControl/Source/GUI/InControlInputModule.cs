@@ -1,13 +1,12 @@
-#if UNITY_4_6 || UNITY_5_0
-using UnityEngine;
-using UnityEngine.EventSystems;
-using InControl;
-
-
+﻿#if UNITY_4_6 || UNITY_4_7 || UNITY_5
 namespace InControl
 {
+	using UnityEngine;
+	using UnityEngine.EventSystems;
+
+
 	[AddComponentMenu( "Event/InControl Input Module" )]
-	public class InControlInputModule : PointerInputModule
+	public class InControlInputModule : StandaloneInputModule
 	{
 		public enum Button : int
 		{
@@ -17,26 +16,17 @@ namespace InControl
 			Action4 = InputControlType.Action4
 		}
 
-
-		private enum InputSource : int
-		{
-			InControl,
-			Mouse
-		}
-
-
-		public Button submitButton = Button.Action1;
-		public Button cancelButton = Button.Action2;
+		public new Button submitButton = Button.Action1;
+		public new Button cancelButton = Button.Action2;
 		[Range( 0.1f, 0.9f )]
 		public float analogMoveThreshold = 0.5f;
 		public float moveRepeatFirstDuration = 0.8f;
 		public float moveRepeatDelayDuration = 0.1f;
 		public bool allowMobileDevice = true;
 		public bool allowMouseInput = true;
-		public bool focusOnMouseHover = true;
+		public bool focusOnMouseHover = false;
 
 		InputDevice inputDevice;
-		InputSource currentInputSource;
 		Vector3 thisMousePosition;
 		Vector3 lastMousePosition;
 		Vector2 thisVectorState;
@@ -47,24 +37,42 @@ namespace InControl
 		bool lastCancelState;
 		float nextMoveRepeatTime;
 		float lastVectorPressedTime;
+		TwoAxisInputControl direction;
+
+		public PlayerAction SubmitAction { get; set; }
+
+		public PlayerAction CancelAction { get; set; }
+
+		public PlayerTwoAxisAction MoveAction { get; set; }
 
 
 		protected InControlInputModule()
 		{
-			TwoAxisInputControl.StateThreshold = analogMoveThreshold;
-			currentInputSource = InputSource.InControl;
+			direction = new TwoAxisInputControl();
+			direction.StateThreshold = analogMoveThreshold;
+		}
+
+
+		public override void UpdateModule()
+		{
+			lastMousePosition = thisMousePosition;
+			thisMousePosition = Input.mousePosition;
 		}
 
 
 		public override bool IsModuleSupported()
 		{
-			return allowMobileDevice || !Application.isMobilePlatform;
+#if UNITY_WII || UNITY_PS3 || UNITY_PS4 || UNITY_XBOX360 || UNITY_XBOXONE
+			return true;
+#endif
+
+			return allowMobileDevice || Input.mousePresent;
 		}
 
 
 		public override bool ShouldActivateModule()
 		{
-			if (!base.ShouldActivateModule())
+			if (!(enabled && gameObject.activeInHierarchy))
 			{
 				return false;
 			}
@@ -76,13 +84,134 @@ namespace InControl
 			shouldActivate |= CancelWasPressed;
 			shouldActivate |= VectorWasPressed;
 
+#if !UNITY_IOS || UNITY_EDITOR
 			if (allowMouseInput)
 			{
-				shouldActivate |= MouseHasMoved();
-				shouldActivate |= MouseButtonIsPressed();
+				shouldActivate |= MouseHasMoved;
+				shouldActivate |= MouseButtonIsPressed;
 			}
+#endif
 
 			return shouldActivate;
+		}
+
+
+		public override void ActivateModule()
+		{
+			base.ActivateModule();
+
+			thisMousePosition = Input.mousePosition;
+			lastMousePosition = Input.mousePosition;
+
+			var selectObject = eventSystem.currentSelectedGameObject;
+
+			if (selectObject == null)
+			{
+				selectObject = eventSystem.firstSelectedGameObject;
+			}
+
+			eventSystem.SetSelectedGameObject( selectObject, GetBaseEventData() );
+		}
+
+
+		public override void Process()
+		{
+			var usedEvent = SendUpdateEventToSelectedObject();
+
+			if (eventSystem.sendNavigationEvents)
+			{
+				if (!usedEvent)
+				{
+					usedEvent = SendVectorEventToSelectedObject();
+				}
+
+				if (!usedEvent)
+				{
+					SendButtonEventToSelectedObject();
+				}
+			}
+
+#if !UNITY_IOS || UNITY_EDITOR
+			if (allowMouseInput)
+			{
+				ProcessMouseEvent();
+			}
+#endif
+		}
+
+
+		bool SendButtonEventToSelectedObject()
+		{
+			if (eventSystem.currentSelectedGameObject == null)
+			{
+				return false;
+			}
+
+			var eventData = GetBaseEventData();
+
+			if (SubmitWasPressed)
+			{
+				//				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, new PointerEventData( EventSystem.current ), ExecuteEvents.pointerDownHandler );
+				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, eventData, ExecuteEvents.submitHandler );
+			}
+			else
+			if (SubmitWasReleased)
+			{
+				//				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, new PointerEventData( EventSystem.current ), ExecuteEvents.pointerUpHandler );
+			}
+
+			if (CancelWasPressed)
+			{
+				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, eventData, ExecuteEvents.cancelHandler );
+			}
+
+			return eventData.used;
+		}
+
+
+		bool SendVectorEventToSelectedObject()
+		{
+			if (!VectorWasPressed)
+			{
+				return false;
+			}
+
+			var axisEventData = GetAxisEventData( thisVectorState.x, thisVectorState.y, 0.5f );
+
+			if (axisEventData.moveDir != MoveDirection.None)
+			{
+				if (eventSystem.currentSelectedGameObject == null)
+				{
+					eventSystem.SetSelectedGameObject( eventSystem.firstSelectedGameObject, GetBaseEventData() );
+				}
+				else
+				{
+					ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, axisEventData, ExecuteEvents.moveHandler );
+				}
+				SetVectorRepeatTimer();
+			}
+
+			return axisEventData.used;
+		}
+
+
+		protected override void ProcessMove( PointerEventData pointerEvent )
+		{
+			var lastPointerEnter = pointerEvent.pointerEnter;
+
+			base.ProcessMove( pointerEvent );
+
+			if (focusOnMouseHover && lastPointerEnter != pointerEvent.pointerEnter)
+			{
+				var selectObject = ExecuteEvents.GetEventHandler<ISelectHandler>( pointerEvent.pointerEnter );
+				eventSystem.SetSelectedGameObject( selectObject, pointerEvent );
+			}
+		}
+
+
+		void Update()
+		{
+			direction.Filter( Device.Direction, Time.deltaTime );
 		}
 
 
@@ -91,14 +220,16 @@ namespace InControl
 			lastVectorState = thisVectorState;
 			thisVectorState = Vector2.zero;
 
-			if (Mathf.Abs( Direction.X ) > analogMoveThreshold)
+			var dir = MoveAction ?? direction;
+
+			if (Utility.AbsoluteIsOverThreshold( dir.X, analogMoveThreshold ))
 			{
-				thisVectorState.x = Mathf.Sign( Direction.X );
+				thisVectorState.x = Mathf.Sign( dir.X );
 			}
 
-			if (Mathf.Abs( Direction.Y ) > analogMoveThreshold)
+			if (Utility.AbsoluteIsOverThreshold( dir.Y, analogMoveThreshold ))
 			{
-				thisVectorState.y = Mathf.Sign( Direction.Y );
+				thisVectorState.y = Mathf.Sign( dir.Y );
 			}
 
 			if (VectorIsReleased)
@@ -124,10 +255,42 @@ namespace InControl
 			}
 
 			lastSubmitState = thisSubmitState;
-			thisSubmitState = SubmitButton.IsPressed;
+			thisSubmitState = SubmitAction == null ? SubmitButton.IsPressed : SubmitAction.IsPressed;
 
 			lastCancelState = thisCancelState;
-			thisCancelState = CancelButton.IsPressed;
+			thisCancelState = CancelAction == null ? CancelButton.IsPressed : CancelAction.IsPressed;
+		}
+
+
+		public InputDevice Device
+		{
+			set
+			{
+				inputDevice = value;
+			}
+
+			get
+			{
+				return inputDevice ?? InputManager.ActiveDevice;
+			}
+		}
+
+
+		InputControl SubmitButton
+		{
+			get
+			{
+				return Device.GetControl( (InputControlType) submitButton );
+			}
+		}
+
+
+		InputControl CancelButton
+		{
+			get
+			{
+				return Device.GetControl( (InputControlType) cancelButton );
+			}
 		}
 
 
@@ -187,6 +350,15 @@ namespace InControl
 		}
 
 
+		bool SubmitWasReleased
+		{
+			get
+			{
+				return !thisSubmitState && thisSubmitState != lastSubmitState;
+			}
+		}
+
+
 		bool CancelWasPressed
 		{
 			get
@@ -196,115 +368,38 @@ namespace InControl
 		}
 
 
-		public override void ActivateModule()
+		bool MouseHasMoved
 		{
-			base.ActivateModule();
-
-			thisMousePosition = Input.mousePosition;
-			lastMousePosition = Input.mousePosition;
-
-			var baseEventData = GetBaseEventData();
-			var gameObject = eventSystem.currentSelectedGameObject;
-			if (gameObject == null)
+			get
 			{
-				gameObject = eventSystem.lastSelectedGameObject;
-			}
-			if (gameObject == null)
-			{
-				gameObject = eventSystem.firstSelectedGameObject;
-			}
-			eventSystem.SetSelectedGameObject( null, baseEventData );
-			eventSystem.SetSelectedGameObject( gameObject, baseEventData );
-		}
-
-
-		public override void DeactivateModule()
-		{
-			base.DeactivateModule();
-			base.ClearSelection();
-		}
-
-
-		public override void Process()
-		{
-			var used = SendUpdateEventToSelectedObject();
-
-			if (!used)
-			{
-				used = SendVectorEventToSelectedObject();
-			}
-
-			if (!used)
-			{
-				SendButtonEventToSelectedObject();
-			}
-
-			if (allowMouseInput)
-			{
-				ProcessMouseEvent();
+				return (thisMousePosition - lastMousePosition).sqrMagnitude > 0.0f;
 			}
 		}
 
 
-		/*
-		void OnGUI()
+		bool MouseButtonIsPressed
 		{
-			var item = eventSystem.currentSelectedGameObject;
-			var name = (item == null) ? "(null)" : item.name;
-			GUI.Label( new Rect( 10, 10, 200, 30 ), name );
+			get
+			{
+				return Input.GetMouseButtonDown( 0 );
+			}
 		}
-		*/
 
 
-		bool SendButtonEventToSelectedObject()
+		// Copied from StandaloneInputModule where these are marked private instead of protected in Unity 5.0 / 5.1
+		#region Unity 5.0 / 5.1 compatibility.
+
+#if UNITY_5_0 || UNITY_5_1
+		
+		bool SendUpdateEventToSelectedObject()
 		{
-			if (eventSystem.currentSelectedGameObject == null /*|| currentInputSource != InputSource.InControl*/)
+			if (eventSystem.currentSelectedGameObject == null)
 			{
 				return false;
 			}
-
-			var baseEventData = GetBaseEventData();
-
-			if (SubmitWasPressed)
-			{
-				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, baseEventData, ExecuteEvents.submitHandler );
-			}
-
-			if (CancelWasPressed)
-			{
-				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, baseEventData, ExecuteEvents.cancelHandler );
-			}
-
+			BaseEventData baseEventData = GetBaseEventData();
+			ExecuteEvents.Execute<IUpdateSelectedHandler>( eventSystem.currentSelectedGameObject, baseEventData, ExecuteEvents.updateSelectedHandler );
 			return baseEventData.used;
-		}
-
-
-		bool SendVectorEventToSelectedObject()
-		{
-			if (!VectorWasPressed)
-			{
-				return false;
-			}
-
-			var axisEventData = GetAxisEventData( thisVectorState.x, thisVectorState.y, 0.5f );
-
-			if (axisEventData.moveDir != MoveDirection.None)
-			{
-				if (currentInputSource != InputSource.InControl)
-				{
-					currentInputSource = InputSource.InControl;
-					if (ResetSelection())
-					{
-						return true;
-					}
-				}
-
-				ExecuteEvents.Execute( eventSystem.currentSelectedGameObject, axisEventData, ExecuteEvents.moveHandler );
-
-				SetVectorRepeatTimer();
-			}
-
-			return axisEventData.used;
 		}
 
 
@@ -325,27 +420,15 @@ namespace InControl
 			ProcessDrag( mousePointerEventData.GetButtonState( PointerEventData.InputButton.Right ).eventData.buttonData );
 			ProcessMousePress( mousePointerEventData.GetButtonState( PointerEventData.InputButton.Middle ).eventData );
 			ProcessDrag( mousePointerEventData.GetButtonState( PointerEventData.InputButton.Middle ).eventData.buttonData );
-			if (!Mathf.Approximately( eventData.buttonData.scrollDelta.sqrMagnitude, 0.0f ))
+			if (!Mathf.Approximately( eventData.buttonData.scrollDelta.sqrMagnitude, 0 ))
 			{
-				GameObject eventHandler = ExecuteEvents.GetEventHandler<IScrollHandler>( eventData.buttonData.pointerCurrentRaycast.gameObject );
+				var eventHandler = ExecuteEvents.GetEventHandler<IScrollHandler>( eventData.buttonData.pointerCurrentRaycast.gameObject );
 				ExecuteEvents.ExecuteHierarchy<IScrollHandler>( eventHandler, eventData.buttonData, ExecuteEvents.scrollHandler );
 			}
 		}
 
 
-		protected override void ProcessMove( PointerEventData pointerEvent )
-		{
-			base.ProcessMove( pointerEvent );
-
-			if (focusOnMouseHover)
-			{
-				var eventHandler = ExecuteEvents.GetEventHandler<ISelectHandler>( pointerEvent.pointerEnter );
-				eventSystem.SetSelectedGameObject( eventHandler, pointerEvent );
-			}
-		}
-
-
-		private void ProcessMousePress( PointerInputModule.MouseButtonEventData data )
+		void ProcessMousePress( PointerInputModule.MouseButtonEventData data )
 		{
 			var buttonData = data.buttonData;
 			var gameObject = buttonData.pointerCurrentRaycast.gameObject;
@@ -357,15 +440,16 @@ namespace InControl
 				buttonData.useDragThreshold = true;
 				buttonData.pressPosition = buttonData.position;
 				buttonData.pointerPressRaycast = buttonData.pointerCurrentRaycast;
+				DeselectIfSelectionChanged( gameObject, buttonData );
 				var gameObject2 = ExecuteEvents.ExecuteHierarchy<IPointerDownHandler>( gameObject, buttonData, ExecuteEvents.pointerDownHandler );
 				if (gameObject2 == null)
 				{
 					gameObject2 = ExecuteEvents.GetEventHandler<IPointerClickHandler>( gameObject );
 				}
-				float unscaledTime = Time.unscaledTime;
+				var unscaledTime = Time.unscaledTime;
 				if (gameObject2 == buttonData.lastPress)
 				{
-					float num = unscaledTime - buttonData.clickTime;
+					var num = unscaledTime - buttonData.clickTime;
 					if (num < 0.3f)
 					{
 						buttonData.clickCount++;
@@ -389,7 +473,6 @@ namespace InControl
 					ExecuteEvents.Execute<IInitializePotentialDragHandler>( buttonData.pointerDrag, buttonData, ExecuteEvents.initializePotentialDrag );
 				}
 			}
-
 			if (data.ReleasedThisFrame())
 			{
 				ExecuteEvents.Execute<IPointerUpHandler>( buttonData.pointerPress, buttonData, ExecuteEvents.pointerUpHandler );
@@ -408,130 +491,29 @@ namespace InControl
 				buttonData.eligibleForClick = false;
 				buttonData.pointerPress = null;
 				buttonData.rawPointerPress = null;
-				buttonData.dragging = false;
-				if (buttonData.pointerDrag != null)
+				if (buttonData.pointerDrag != null && buttonData.dragging)
 				{
 					ExecuteEvents.Execute<IEndDragHandler>( buttonData.pointerDrag, buttonData, ExecuteEvents.endDragHandler );
 				}
+				buttonData.dragging = false;
 				buttonData.pointerDrag = null;
 				if (gameObject != buttonData.pointerEnter)
 				{
-					base.HandlePointerExitAndEnter( buttonData, null );
-					base.HandlePointerExitAndEnter( buttonData, gameObject );
+					HandlePointerExitAndEnter( buttonData, null );
+					HandlePointerExitAndEnter( buttonData, gameObject );
 				}
 			}
 		}
 
 
-		bool ResetSelection()
+		static bool UseMouse( bool pressed, bool released, PointerEventData pointerData )
 		{
-			var baseEventData = GetBaseEventData();
-			var lastPointerEventData = base.GetLastPointerEventData( -1 );
-			var rootGameObject = (lastPointerEventData != null) ? lastPointerEventData.pointerEnter : null;
-			if (lastPointerEventData != null)
-			{
-				HandlePointerExitAndEnter( lastPointerEventData, null );
-			}
-			eventSystem.SetSelectedGameObject( null, baseEventData );
-			var result = false;
-			var gameObject = ExecuteEvents.GetEventHandler<ISelectHandler>( rootGameObject );
-			if (gameObject == null)
-			{
-				gameObject = eventSystem.lastSelectedGameObject;
-				result = true;
-			}
-			eventSystem.SetSelectedGameObject( gameObject, baseEventData );
-			return result;
+			return pressed || released || pointerData.IsPointerMoving() || pointerData.IsScrolling();
 		}
 
+#endif
 
-		bool SendUpdateEventToSelectedObject()
-		{
-			if (base.eventSystem.currentSelectedGameObject == null)
-			{
-				return false;
-			}
-			var baseEventData = GetBaseEventData();
-			ExecuteEvents.Execute<IUpdateSelectedHandler>( base.eventSystem.currentSelectedGameObject, baseEventData, ExecuteEvents.updateSelectedHandler );
-			return baseEventData.used;
-		}
-
-
-		public override void UpdateModule()
-		{
-			lastMousePosition = thisMousePosition;
-			thisMousePosition = Input.mousePosition;
-		}
-
-
-		bool UseMouse( bool pressed, bool released, PointerEventData pointerData )
-		{
-			if (currentInputSource == InputSource.Mouse)
-			{
-				return true;
-			}
-
-			if (pressed || released || pointerData.IsPointerMoving() || pointerData.IsScrolling())
-			{
-				currentInputSource = InputSource.Mouse;
-				base.eventSystem.SetSelectedGameObject( null, pointerData );
-			}
-
-			return currentInputSource == InputSource.Mouse;
-		}
-
-
-		bool MouseHasMoved()
-		{
-			return (thisMousePosition - lastMousePosition).sqrMagnitude > 0.0f;
-		}
-
-
-		bool MouseButtonIsPressed()
-		{
-			return Input.GetMouseButtonDown( 0 );
-		}
-
-
-		InputDevice Device
-		{
-			set
-			{
-				inputDevice = value;
-			}
-
-			get
-			{
-				return inputDevice ?? InputManager.ActiveDevice;
-			}
-		}
-
-
-		TwoAxisInputControl Direction
-		{
-			get
-			{
-				return Device.Direction;
-			}
-		}
-
-
-		InputControl SubmitButton
-		{
-			get
-			{
-				return Device.GetControl( (InputControlType) submitButton );
-			}
-		}
-
-
-		InputControl CancelButton
-		{
-			get
-			{
-				return Device.GetControl( (InputControlType) cancelButton );
-			}
-		}
+		#endregion
 	}
 }
 #endif

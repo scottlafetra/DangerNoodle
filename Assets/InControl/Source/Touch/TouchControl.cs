@@ -1,26 +1,40 @@
-using UnityEngine;
-
-
 namespace InControl
 {
+	using UnityEngine;
+
+
 	public abstract class TouchControl : MonoBehaviour
 	{
 		public enum ButtonTarget : int
 		{
-			None = 0,
-			Action1 = InputControlType.Action1,
-			Action2 = InputControlType.Action2,
-			Action3 = InputControlType.Action3,
-			Action4 = InputControlType.Action4,
-			LeftTrigger = InputControlType.LeftTrigger,
-			RightTrigger = InputControlType.RightTrigger,
-			LeftBumper = InputControlType.LeftBumper,
-			RightBumper = InputControlType.RightBumper,
+			None = InputControlType.None,
+
 			DPadDown = InputControlType.DPadDown,
 			DPadLeft = InputControlType.DPadLeft,
 			DPadRight = InputControlType.DPadRight,
 			DPadUp = InputControlType.DPadUp,
+
+			LeftTrigger = InputControlType.LeftTrigger,
+			RightTrigger = InputControlType.RightTrigger,
+
+			LeftBumper = InputControlType.LeftBumper,
+			RightBumper = InputControlType.RightBumper,
+
+			Action1 = InputControlType.Action1,
+			Action2 = InputControlType.Action2,
+			Action3 = InputControlType.Action3,
+			Action4 = InputControlType.Action4,
+			Action5 = InputControlType.Action5,
+			Action6 = InputControlType.Action6,
+			Action7 = InputControlType.Action7,
+			Action8 = InputControlType.Action8,
+			Action9 = InputControlType.Action9,
+			Action10 = InputControlType.Action10,
+			Action11 = InputControlType.Action11,
+			Action12 = InputControlType.Action12,
+
 			Menu = InputControlType.Menu,
+
 			Button0 = InputControlType.Button0,
 			Button1 = InputControlType.Button1,
 			Button2 = InputControlType.Button2,
@@ -65,7 +79,8 @@ namespace InControl
 		public abstract void CreateControl();
 		public abstract void DestroyControl();
 		public abstract void ConfigureControl();
-		public abstract void SubmitControlState( ulong updateTick );
+		public abstract void SubmitControlState( ulong updateTick, float deltaTime );
+		public abstract void CommitControlState( ulong updateTick, float deltaTime );
 		public abstract void TouchBegan( Touch touch );
 		public abstract void TouchMoved( Touch touch );
 		public abstract void TouchEnded( Touch touch );
@@ -87,30 +102,13 @@ namespace InControl
 
 		void Setup()
 		{
+			if (!enabled)
+			{
+				return;
+			}
+
 			CreateControl();
 			ConfigureControl();
-		}
-
-
-		protected GameObject CreateSpriteGameObject( string name )
-		{
-			var spriteGameObject = new GameObject( name );
-			spriteGameObject.transform.parent = transform;
-			spriteGameObject.transform.localPosition = Vector3.zero;
-			spriteGameObject.transform.localScale = Vector3.one;
-			spriteGameObject.layer = LayerMask.NameToLayer( "UI" );
-			return spriteGameObject;
-		}
-
-
-		protected SpriteRenderer CreateSpriteRenderer( GameObject spriteGameObject, Sprite sprite, int sortingOrder )
-		{
-			var spriteRenderer = spriteGameObject.AddComponent<SpriteRenderer>();
-			spriteRenderer.sprite = sprite;
-			spriteRenderer.sortingOrder = sortingOrder;
-			spriteRenderer.sharedMaterial = new Material( Shader.Find( "Sprites/Default" ) );
-			spriteRenderer.sharedMaterial.SetFloat( "PixelSnap", 1.0f );
-			return spriteRenderer;
 		}
 
 
@@ -136,7 +134,7 @@ namespace InControl
 		}
 
 
-		protected void SubmitButtonState( ButtonTarget target, bool state, ulong updateTick )
+		protected void SubmitButtonState( ButtonTarget target, bool state, ulong updateTick, float deltaTime )
 		{
 			if (TouchManager.Device == null || target == ButtonTarget.None)
 			{
@@ -144,97 +142,119 @@ namespace InControl
 			}
 
 			var control = TouchManager.Device.GetControl( (InputControlType) target );
-			if (control != null)
+			if (control != null && control != InputControl.Null)
 			{
-				control.UpdateWithState( state, updateTick );
+				control.UpdateWithState( state, updateTick, deltaTime );
 			}
 		}
 
 
-		protected void SubmitAnalogValue( AnalogTarget target, Vector2 value, float lowerDeadZone, float upperDeadZone, ulong updateTick )
+		protected void CommitButton( ButtonTarget target )
 		{
-			if (TouchManager.Device == null)
+			if (TouchManager.Device == null || target == ButtonTarget.None)
+			{
+				return;
+			}
+
+			var control = TouchManager.Device.GetControl( (InputControlType) target );
+			if (control != null && control != InputControl.Null)
+			{
+				control.Commit();
+			}
+		}
+
+
+		protected void SubmitAnalogValue( AnalogTarget target, Vector2 value, float lowerDeadZone, float upperDeadZone, ulong updateTick, float deltaTime )
+		{
+			if (TouchManager.Device == null || target == AnalogTarget.None)
+			{
+				return;
+			}
+
+			var v = Utility.ApplyCircularDeadZone( value, lowerDeadZone, upperDeadZone );
+
+			if (target == AnalogTarget.LeftStick || target == AnalogTarget.Both)
+			{
+				TouchManager.Device.UpdateLeftStickWithValue( v, updateTick, deltaTime );
+			}
+
+			if (target == AnalogTarget.RightStick || target == AnalogTarget.Both)
+			{
+				TouchManager.Device.UpdateRightStickWithValue( v, updateTick, deltaTime );
+			}
+		}
+
+
+		protected void CommitAnalog( AnalogTarget target )
+		{
+			if (TouchManager.Device == null || target == AnalogTarget.None)
 			{
 				return;
 			}
 
 			if (target == AnalogTarget.LeftStick || target == AnalogTarget.Both)
 			{
-				TouchManager.Device.LeftStickX.LowerDeadZone = lowerDeadZone;
-				TouchManager.Device.LeftStickX.UpperDeadZone = upperDeadZone;
-				TouchManager.Device.LeftStickX.UpdateWithValue( value.x, updateTick );
-
-				TouchManager.Device.LeftStickY.LowerDeadZone = lowerDeadZone;
-				TouchManager.Device.LeftStickY.UpperDeadZone = upperDeadZone;
-				TouchManager.Device.LeftStickY.UpdateWithValue( value.y, updateTick );
+				TouchManager.Device.CommitLeftStick();
 			}
-			
+
 			if (target == AnalogTarget.RightStick || target == AnalogTarget.Both)
 			{
-				TouchManager.Device.RightStickX.LowerDeadZone = lowerDeadZone;
-				TouchManager.Device.RightStickX.UpperDeadZone = upperDeadZone;
-				TouchManager.Device.RightStickX.UpdateWithValue( value.x, updateTick );
-				
-				TouchManager.Device.RightStickY.LowerDeadZone = lowerDeadZone;
-				TouchManager.Device.RightStickY.UpperDeadZone = upperDeadZone;
-				TouchManager.Device.RightStickY.UpdateWithValue( value.y, updateTick );
+				TouchManager.Device.CommitRightStick();
 			}
 		}
 
 
-		protected void SubmitRawAnalogValue( AnalogTarget target, Vector2 rawValue, ulong updateTick )
+		protected void SubmitRawAnalogValue( AnalogTarget target, Vector2 rawValue, ulong updateTick, float deltaTime )
 		{
-			if (TouchManager.Device == null)
+			if (TouchManager.Device == null || target == AnalogTarget.None)
 			{
 				return;
 			}
-			
+
 			if (target == AnalogTarget.LeftStick || target == AnalogTarget.Both)
 			{
-				TouchManager.Device.LeftStickX.UpdateWithValue( rawValue.x, updateTick );				
-				TouchManager.Device.LeftStickY.UpdateWithValue( rawValue.y, updateTick );
+				TouchManager.Device.UpdateLeftStickWithRawValue( rawValue, updateTick, deltaTime );
 			}
-			
+
 			if (target == AnalogTarget.RightStick || target == AnalogTarget.Both)
 			{
-				TouchManager.Device.RightStickX.UpdateWithValue( rawValue.x, updateTick );				
-				TouchManager.Device.RightStickY.UpdateWithValue( rawValue.y, updateTick );
+				TouchManager.Device.UpdateRightStickWithRawValue( rawValue, updateTick, deltaTime );
 			}
 		}
 
 
-		protected static Vector2 SnapTo( Vector2 vector, SnapAngles snapAngles )
+		protected static Vector3 SnapTo( Vector2 vector, SnapAngles snapAngles )
 		{
 			if (snapAngles == SnapAngles.None)
 			{
 				return vector;
 			}
-			
+
 			var snapAngle = 360.0f / ((int) snapAngles);
-			
+
 			return SnapTo( vector, snapAngle );
 		}
 
-		
-		protected static Vector2 SnapTo( Vector2 vector, float snapAngle )
+
+		protected static Vector3 SnapTo( Vector2 vector, float snapAngle )
 		{
-			float angle = Vector2.Angle( vector, Vector2.up );
-			
+			var angle = Vector2.Angle( vector, Vector2.up );
+
 			if (angle < snapAngle / 2.0f)
 			{
 				return Vector2.up * vector.magnitude;
 			}
-			
+
 			if (angle > 180.0f - snapAngle / 2.0f)
 			{
 				return -Vector2.up * vector.magnitude;
 			}
-			
+
 			var t = Mathf.Round( angle / snapAngle );
 			var deltaAngle = (t * snapAngle) - angle;
 			var axis = Vector3.Cross( Vector2.up, vector );
 			var q = Quaternion.AngleAxis( deltaAngle, axis );
-			
+
 			return q * vector;
 		}
 
@@ -299,4 +319,3 @@ namespace InControl
 		}
 	}
 }
-

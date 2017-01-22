@@ -23,11 +23,18 @@ public class PlayerController : MonoBehaviour {
     private InputDevice controller;
     private Rigidbody2D myRigidbody;
     public EmitterSpawner emitterSpawner;
+    public int playerNum;
 
-    void Start()
+    IEnumerator Start()
     {
         myRigidbody = gameObject.GetComponent<Rigidbody2D>();
-        controller = InputManager.Devices[ GetComponent<PlayerTag>().playerNum ];
+
+        while( InputManager.Devices.Count < 2 )
+        {
+            yield return null;
+        }
+
+        controller = InputManager.Devices[ playerNum ];
 	}
 	
 	// Update is called once per frame

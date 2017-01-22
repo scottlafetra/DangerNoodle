@@ -1,22 +1,14 @@
 ﻿#if UNITY_EDITOR
-using System.IO;
-using UnityEditor;
-using UnityEngine;
-
-
 namespace InControl
 {
+	using UnityEditor;
+	using UnityEngine;
+
+
 	public class TouchControlEditor : Editor
 	{
 		protected Texture headerTexture;
 		Rect headerTextureRect;
-
-
-		protected void LoadHeaderImage( string fileName )
-		{
-			var path = AssetDatabase.GetAssetPath( MonoScript.FromScriptableObject( this ) );
-			headerTexture = AssetDatabase.LoadAssetAtPath<Texture>( Path.GetDirectoryName( path ) + "/" + fileName );
-		}
 
 
 		protected void AddHeaderImageSpace()
@@ -26,8 +18,8 @@ namespace InControl
 				GUILayout.Space( 5 );
 
 				headerTextureRect = GUILayoutUtility.GetRect( 0.0f, -22.0f );
-				headerTextureRect.width = headerTexture.width;
-				headerTextureRect.height = headerTexture.height;
+				headerTextureRect.width = headerTexture.width / 2;
+				headerTextureRect.height = headerTexture.height / 2;
 
 				GUILayout.Space( headerTextureRect.height );
 			}

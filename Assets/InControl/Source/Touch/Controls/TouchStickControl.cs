@@ -1,9 +1,24 @@
-using System.IO;
-using UnityEngine;
-
-
 namespace InControl
 {
+	using UnityEngine;
+
+
+	public enum LockAxis : int
+	{
+		None,
+		Horizontal,
+		Vertical,
+	}
+
+
+	public enum DragAxis : int
+	{
+		Both,
+		Horizontal,
+		Vertical,
+	}
+
+
 	public class TouchStickControl : TouchControl
 	{
 		[Header( "Position" )]
@@ -27,16 +42,20 @@ namespace InControl
 		[Header( "Options" )]
 
 		public AnalogTarget target = AnalogTarget.LeftStick;
+		public SnapAngles snapAngles = SnapAngles.None;
+		public LockAxis lockToAxis = LockAxis.None;
 
-		[Range( 0, 1 )] 
+		[Range( 0, 1 )]
 		public float lowerDeadZone = 0.1f;
 
-		[Range( 0, 1 )] 
+		[Range( 0, 1 )]
 		public float upperDeadZone = 0.9f;
 
 		public AnimationCurve inputCurve = AnimationCurve.Linear( 0.0f, 0.0f, 1.0f, 1.0f );
 
 		public bool allowDragging = false;
+		public DragAxis allowDraggingAxis = DragAxis.Both;
+
 		public bool snapToInitialTouch = true;
 		public bool resetWhenDone = true;
 		public float resetDuration = 0.1f;
@@ -133,9 +152,15 @@ namespace InControl
 		}
 
 
-		public override void SubmitControlState( ulong updateTick )
+		public override void SubmitControlState( ulong updateTick, float deltaTime )
 		{
-			SubmitAnalogValue( target, value, lowerDeadZone, upperDeadZone, updateTick );
+			SubmitAnalogValue( target, value, lowerDeadZone, upperDeadZone, updateTick, deltaTime );
+		}
+
+
+		public override void CommitControlState( ulong updateTick, float deltaTime )
+		{
+			CommitAnalog( target );
 		}
 
 
@@ -184,6 +209,16 @@ namespace InControl
 
 			movedPosition = TouchManager.ScreenToWorldPoint( touch.position );
 
+			if (lockToAxis == LockAxis.Horizontal && allowDraggingAxis == DragAxis.Horizontal)
+			{
+				movedPosition.y = beganPosition.y;
+			}
+			else
+			if (lockToAxis == LockAxis.Vertical && allowDraggingAxis == DragAxis.Vertical)
+			{
+				movedPosition.x = beganPosition.x;
+			}
+
 			var vector = movedPosition - beganPosition;
 			var normal = vector.normalized;
 			var length = vector.magnitude;
@@ -191,21 +226,66 @@ namespace InControl
 			if (allowDragging)
 			{
 				var excess = length - worldKnobRange;
+
 				if (excess < 0.0f)
 				{
 					excess = 0.0f;
 				}
-				beganPosition = beganPosition + (excess * normal);
+
+				var dragDelta = excess * normal;
+
+				if (allowDraggingAxis == DragAxis.Horizontal)
+				{
+					dragDelta.y = 0.0f;
+				}
+				else
+				if (allowDraggingAxis == DragAxis.Vertical)
+				{
+					dragDelta.x = 0.0f;
+				}
+
+				beganPosition = beganPosition + dragDelta;
 				RingPosition = beganPosition;
 			}
 
+			//if (lockToAxis == LockAxis.Horizontal)
+			//{
+			//	movedPosition.y = beganPosition.y;
+			//	normal.y = 0.0f;
+			//}
+			//else
+			//if (lockToAxis == LockAxis.Vertical)
+			//{
+			//	movedPosition.x = beganPosition.x;
+			//	normal.x = 0.0f;
+			//}
+
 			movedPosition = beganPosition + (Mathf.Clamp( length, 0.0f, worldKnobRange ) * normal);
 
-			value = (movedPosition - beganPosition) / worldKnobRange;
-			value.x = inputCurve.Evaluate( Mathf.Abs( value.x ) ) * Mathf.Sign( value.x );
-			value.y = inputCurve.Evaluate( Mathf.Abs( value.y ) ) * Mathf.Sign( value.y );
+			if (lockToAxis == LockAxis.Horizontal)
+			{
+				movedPosition.y = beganPosition.y;
+			}
+			else
+			if (lockToAxis == LockAxis.Vertical)
+			{
+				movedPosition.x = beganPosition.x;
+			}
 
+			if (snapAngles != SnapAngles.None)
+			{
+				movedPosition = SnapTo( movedPosition - beganPosition, snapAngles ) + beganPosition;
+			}
+
+			// How to clamp to bottom half only:
+			// movedPosition.y = Mathf.Min( movedPosition.y, beganPosition.y );
+
+			RingPosition = beganPosition;
 			KnobPosition = movedPosition;
+
+			value = (movedPosition - beganPosition) / worldKnobRange;
+			value.x = inputCurve.Evaluate( Utility.Abs( value.x ) ) * Mathf.Sign( value.x );
+			value.y = inputCurve.Evaluate( Utility.Abs( value.y ) ) * Mathf.Sign( value.y );
 		}
 
 
@@ -219,10 +299,10 @@ namespace InControl
 			value = Vector3.zero;
 
 			var ringResetDelta = (resetPosition - RingPosition).magnitude;
-			ringResetSpeed = Mathf.Approximately( resetDuration, 0.0f ) ? ringResetDelta : (ringResetDelta / resetDuration);
+			ringResetSpeed = Utility.IsZero( resetDuration ) ? ringResetDelta : (ringResetDelta / resetDuration);
 
 			var knobResetDelta = (RingPosition - KnobPosition).magnitude;
-			knobResetSpeed = Mathf.Approximately( resetDuration, 0.0f ) ? knobRange : (knobResetDelta / resetDuration);
+			knobResetSpeed = Utility.IsZero( resetDuration ) ? knobRange : (knobResetDelta / resetDuration);
 
 			currentTouch = null;
 
@@ -284,7 +364,7 @@ namespace InControl
 
 
 		public TouchControlAnchor Anchor
-		{ 
+		{
 			get
 			{
 				return anchor;
@@ -302,7 +382,7 @@ namespace InControl
 
 
 		public Vector2 Offset
-		{ 
+		{
 			get
 			{
 				return offset;
@@ -320,7 +400,7 @@ namespace InControl
 
 
 		public TouchUnitType OffsetUnitType
-		{ 
+		{
 			get
 			{
 				return offsetUnitType;
@@ -338,7 +418,7 @@ namespace InControl
 
 
 		public Rect ActiveArea
-		{ 
+		{
 			get
 			{
 				return activeArea;
@@ -356,7 +436,7 @@ namespace InControl
 
 
 		public TouchUnitType AreaUnitType
-		{ 
+		{
 			get
 			{
 				return areaUnitType;

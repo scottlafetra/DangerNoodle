@@ -1,18 +1,17 @@
-using System;
-using UnityEngine;
-using InControl;
-
-
 namespace TouchExample
 {
+	using InControl;
+	using UnityEngine;
+
+
 	public class CubeController : MonoBehaviour
 	{
-		Renderer cubeRenderer;
+		Renderer cachedRenderer;
 
 
 		void Start()
 		{
-			cubeRenderer = GetComponent<Renderer>();
+			cachedRenderer = GetComponent<Renderer>();
 		}
 
 
@@ -21,8 +20,16 @@ namespace TouchExample
 			// Use last device which provided input.
 			var inputDevice = InputManager.ActiveDevice;
 
+			// Disable and hide touch controls if we use a controller.
+			// If "Enable Controls On Touch" is ticked in Touch Manager inspector,
+			// controls will be enabled and shown again when the screen is touched.
+			if (inputDevice != InputDevice.Null && inputDevice != TouchManager.Device)
+			{
+				TouchManager.ControlsEnabled = false;
+			}
+
 			// Set target object material color based on which action is pressed.
-			cubeRenderer.material.color = GetColorFromActionButtons( inputDevice );
+			cachedRenderer.material.color = GetColorFromActionButtons( inputDevice );
 
 			// Rotate target object.
 			transform.Rotate( Vector3.down, 500.0f * Time.deltaTime * inputDevice.Direction.X, Space.World );
@@ -42,12 +49,31 @@ namespace TouchExample
 				return Color.red;
 			}
 
-			if (inputDevice.GetControl( InputControlType.Button0 ))
+			if (inputDevice.Action3)
+			{
+				return Color.blue;
+			}
+
+			if (inputDevice.Action4)
 			{
 				return Color.yellow;
 			}
 
 			return Color.white;
+		}
+
+
+		void OnGUI()
+		{
+			var y = 10.0f;
+
+			var touchCount = TouchManager.TouchCount;
+			for (var i = 0; i < touchCount; i++)
+			{
+				var touch = TouchManager.GetTouch( i );
+				GUI.Label( new Rect( 10, y, 500, y + 15.0f ), "" + i + ": fingerId = " + touch.fingerId + ", phase = " + touch.phase.ToString() + ", position = " + touch.position );
+				y += 20.0f;
+			}
 		}
 	}
 }
