@@ -5,24 +5,26 @@ using UnityEngine.UI;
 
 public class TracksPlayerCharge : MonoBehaviour {
 
-    public MouseFollower player;
+    public PlayerController player;
 
-    private Image chargeBar;
+    public float intensity = 6;
+
+    private Light chargeLight;
 	
 	void Start()
     {
-        chargeBar = GetComponent<Image>();
+        chargeLight = GetComponent<Light>();
     }
 
 	void Update ()
     {
         if( player.fired )
         {
-            chargeBar.fillAmount = Mathf.Min( ( Time.time - player.timerStart ) / player.limit, 1 );
+            chargeLight.intensity = Mathf.Min( ( Time.time - player.timerStart ) / player.limit, 1 ) * intensity;
         }
         else
         {
-            chargeBar.fillAmount = 0;
+            chargeLight.intensity = 0;
         }
         	
 	}

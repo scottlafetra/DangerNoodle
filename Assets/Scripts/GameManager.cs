@@ -1,16 +1,19 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using InControl;
 
 public class GameManager : MonoBehaviour {
 
     public List<GameObject> players;
     public List<Transform> spawnPoints;
+    public List<ScoreKeeper> scores;
 
     public GameObject menu;
-    public GameObject creditStuff;
 
     public static GameManager instance;
+
+    private bool inMenu;
 
 	// Use this for initialization
 	void Start () {
@@ -19,9 +22,22 @@ public class GameManager : MonoBehaviour {
         EnterMenu();
 	}
 
+    void Update()
+    {
+        if( !inMenu && InputManager.ActiveDevice.MenuWasPressed )
+        {
+            EnterMenu();
+        }
+
+        if( inMenu && InputManager.ActiveDevice.AnyButton.WasPressed )
+        {
+            StartGame();
+        }
+    }
+
     public void StartGame()
     {
-        creditStuff.SetActive( false );
+        inMenu = false;
         menu.SetActive( false );
 
         for( int i = 0; i < players.Count; ++i )
@@ -30,44 +46,51 @@ public class GameManager : MonoBehaviour {
             players[ i ].transform.position = spawnPoints[ i ].position;
             players[ i ].transform.rotation = spawnPoints[ i ].rotation;
             players[ i ].GetComponent<Rigidbody2D>().velocity = new Vector2();
+            players[ i ].GetComponent<PlayerController>().fired = false;
+        }
+        foreach( ScoreKeeper scoreKeeper in scores )
+        {
+            scoreKeeper.gameObject.SetActive( true );
         }
     }
 
     public void EnterMenu()
     {
+        inMenu = true;
         menu.SetActive( true );
-
-        creditStuff.SetActive( false );
+        
         foreach( GameObject player in players )
         {
             player.SetActive( false );
         }
-    }
-
-    public void EnterCredits()
-    {
-        creditStuff.SetActive( true );
-
-        menu.SetActive( false );
-        foreach( GameObject player in players )
+        foreach( ScoreKeeper scoreKeeper in scores)
         {
-            player.SetActive( false );
+            scoreKeeper.gameObject.SetActive( false );
+            scoreKeeper.SetScore( 0 );
+        }
+        foreach( GameObject noodle in GameObject.FindGameObjectsWithTag( "Noodle" ) )
+        {
+            Destroy( noodle );
         }
     }
 	
 	public void CheckForWin()
     {
         bool oneStanding = false;
-
-        foreach( GameObject player in players )
+        int standingPlayer = -1;
+        
+        for(int i = 0; i < players.Count; ++i )
         {
-            if( player.activeSelf )
+            if( players[i].activeSelf )
             {
+                standingPlayer = i;
+
                 if( oneStanding )
                 {
                     //no win
                     return; 
                 }
+
 
                 oneStanding = true;
             }
@@ -75,11 +98,24 @@ public class GameManager : MonoBehaviour {
 
         if( oneStanding )
         {
-            //win
+            scores[ standingPlayer ].AddWin();
+            StartCoroutine( NextRound() );
         }
         else
         {
-            // all lose
+            StartCoroutine( NextRound() );
         }
+    }
+
+    public IEnumerator NextRound()
+    {
+        yield return new WaitForSeconds( 1 );
+
+        foreach( GameObject noodle in GameObject.FindGameObjectsWithTag( "Noodle" ) )
+        {
+            Destroy( noodle );
+        }
+
+        StartGame();
     }
 }

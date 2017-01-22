@@ -24,6 +24,7 @@ public class EmitsNoodle : MonoBehaviour {
 	void Start () {
 
         lineHandler = Instantiate( lineRenderer ).GetComponent<LineHandler>();
+        lineHandler.gameObject.SetActive( true );
 
         StartCoroutine( EmitNoodles() );
 	}

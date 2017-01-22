@@ -11,10 +11,14 @@ public class PlayerController : MonoBehaviour {
     public float limit = 0f;
 
     public bool fired = false;
+    public float fireCooldown;
+    private float nextFireTime = 0;
 
     public float timerStart = 0f;
     public float timerEnd = 0f;
     float timerResult = 0f;
+
+    public AudioSource noodleSound;
 
     private InputDevice controller;
     private Rigidbody2D myRigidbody;
@@ -24,11 +28,11 @@ public class PlayerController : MonoBehaviour {
     {
         myRigidbody = gameObject.GetComponent<Rigidbody2D>();
         controller = InputManager.Devices[ GetComponent<PlayerTag>().playerNum ];
-        Debug.Log( GetComponent<PlayerTag>().playerNum );
 	}
 	
 	// Update is called once per frame
 	void Update () {
+
         myRigidbody.velocity = new Vector2(
             controller.LeftStick.X * speed,
             controller.LeftStick.Y * speed
@@ -63,7 +67,7 @@ public class PlayerController : MonoBehaviour {
 
     void Timer(bool b)
     {
-        if( b )
+        if( b && ( Time.time > nextFireTime ) )
         {
             fireDown();
         }
@@ -96,6 +100,11 @@ public class PlayerController : MonoBehaviour {
             // Emit a noodle
             float noodliness = Mathf.Max( 0.1f, timerResult / limit );
             emitterSpawner.Spawn( noodliness, noodliness );
+
+            noodleSound.time = 0.4f;
+            noodleSound.Play();
+
+            nextFireTime = Time.time + fireCooldown;
 
             fired = false;
         }
