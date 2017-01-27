@@ -5,6 +5,7 @@ using UnityEngine;
 public class LineHandler : MonoBehaviour {
 
     public float timeAfterDeath;
+    public float normalRadius = 0.5f;
 
     private List<GameObject> segments = new List<GameObject>();
     private LineRenderer lineRenderer;
@@ -54,23 +55,28 @@ public class LineHandler : MonoBehaviour {
 	
     public void AddSegment( GameObject segment)
     {
-        this.segments.Add( segment );
+        segments.Add( segment );
         segment.GetComponent<EventOnTriggerEnter>().triggered += new EventOnTriggerEnter.NoodleTriggeredHandler( FreezeLine );
+        resizeSegments();
     }
-    /*
-    public void RemoveSegment(Vector3 segment)
+
+    private void resizeSegments()
     {
-        
-        RemoveSegment( positions.IndexOf( segment ) );
-    }*/
+        for( int i = 0; i < segments.Count; ++i)
+        {
+            segments[i].GetComponent<CircleCollider2D>().radius = normalRadius * (i / segments.Count);
+        }
+    }
 
     public void RemoveSegment(int index)
     {
         segments.RemoveAt( index );
-
-        if( segments.Count == 0 )
+        
+        if ( segments.Count == 0 )
         {
             Destroy( gameObject );
         }
+        resizeSegments();
+
     }
 }
