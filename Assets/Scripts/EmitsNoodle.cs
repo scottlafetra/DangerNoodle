@@ -43,8 +43,8 @@ public class EmitsNoodle : MonoBehaviour {
     {
         UpdateNoodleTime();
         noodlesEmitted = 0;
-        float endTime = noodleTimeSpacing * noodleLength;
-        while( Time.time < noodleLength )
+        float endTime = Time.time + noodleTimeSpacing * noodleLength;
+        while( Time.time < endTime )
         {
             // Wait until next time to emit
             while( Time.time < nextNoodleTime )

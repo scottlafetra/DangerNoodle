@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using InControl;
 
 public class GameManager : MonoBehaviour {
@@ -18,6 +19,8 @@ public class GameManager : MonoBehaviour {
 	// Use this for initialization
 	void Start () {
         instance = this;
+
+        Cursor.visible = false;
 
         EnterMenu();
 	}
@@ -40,6 +43,11 @@ public class GameManager : MonoBehaviour {
         if( inMenu && InputManager.ActiveDevice.AnyButton.WasPressed )
         {
             StartGame();
+        }
+
+        if( Input.GetKey("r"))
+        {
+            SceneManager.LoadScene("main");
         }
     }
 
@@ -132,6 +140,8 @@ public class GameManager : MonoBehaviour {
         {
             Destroy( noodle );
         }
+
+        Resources.UnloadUnusedAssets();
 
         StartGame();
     }
